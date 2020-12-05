@@ -1,7 +1,8 @@
 use std::env;
 use std::fs;
 
-fn parse_line(line: &str) -> Option<(i32, i32, i32)> {
+// Original implementation, probably faster, but harder to write
+fn _parse_line(line: &str) -> Option<(i32, i32, i32)> {
     if line.len() != 10 {
         None
     } else {
@@ -31,6 +32,26 @@ fn parse_line(line: &str) -> Option<(i32, i32, i32)> {
                 col_range /= 2;
             }
             col_low_bound
+        };
+        Some((row, col, row * 8 + col))
+    }
+}
+
+fn parse_line(line: &str) -> Option<(i32, i32, i32)> {
+    if line.len() != 10 {
+        None
+    } else {
+        let row = {
+            let mut row_slice = (&line[0..7]).to_string();
+            row_slice = row_slice.replace("F", "0");
+            row_slice = row_slice.replace("B", "1");
+            i32::from_str_radix(&row_slice, 2).expect("Couldn't parse")
+        };
+        let col = {
+            let mut col_slice = (&line[7..10]).to_string();
+            col_slice = col_slice.replace("R", "1");
+            col_slice = col_slice.replace("L", "0");
+            i32::from_str_radix(&col_slice, 2).expect("Couldn't parse")
         };
         Some((row, col, row * 8 + col))
     }
