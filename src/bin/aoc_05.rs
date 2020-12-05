@@ -2,14 +2,14 @@ use std::env;
 use std::fs;
 
 // Original implementation, probably faster, but harder to write
-fn _parse_line(line: &str) -> Option<(i32, i32, i32)> {
+fn _parse_line(line: &str) -> Option<(u32, u32, u32)> {
     if line.len() != 10 {
         None
     } else {
         let mut itr = line.chars();
         let row = {
-            let mut row_low_bound: i32 = 0;
-            let mut row_range: i32 = 64;
+            let mut row_low_bound: u32 = 0;
+            let mut row_range: u32 = 64;
             for _i in 0..7 {
                 match itr.next().unwrap() {
                     'F' => (),
@@ -21,8 +21,8 @@ fn _parse_line(line: &str) -> Option<(i32, i32, i32)> {
             row_low_bound
         };
         let col = {
-            let mut col_low_bound: i32 = 0;
-            let mut col_range: i32 = 4;
+            let mut col_low_bound: u32 = 0;
+            let mut col_range: u32 = 4;
             for _i in 0..3 {
                 match itr.next().unwrap() {
                     'L' => (),
@@ -37,21 +37,38 @@ fn _parse_line(line: &str) -> Option<(i32, i32, i32)> {
     }
 }
 
-fn parse_line(line: &str) -> Option<(i32, i32, i32)> {
+fn parse_line(line: &str) -> Option<(u32, u32, u32)> {
     if line.len() != 10 {
         None
     } else {
+        let mut itr = line.chars();
         let row = {
-            let mut row_slice = (&line[0..7]).to_string();
-            row_slice = row_slice.replace("F", "0");
-            row_slice = row_slice.replace("B", "1");
-            i32::from_str_radix(&row_slice, 2).expect("Couldn't parse")
+            let mut row: u32 = 0;
+            for _i in 0..7 {
+                row <<= 1;
+                row += {
+                    match itr.next().unwrap() {
+                        'F' => 0,
+                        'B' => 1,
+                        _ => panic!("Unknown row specifier"),
+                    }
+                }
+            }
+            row
         };
         let col = {
-            let mut col_slice = (&line[7..10]).to_string();
-            col_slice = col_slice.replace("R", "1");
-            col_slice = col_slice.replace("L", "0");
-            i32::from_str_radix(&col_slice, 2).expect("Couldn't parse")
+            let mut col: u32 = 0;
+            for _i in 0..3 {
+                col <<= 1;
+                col += {
+                    match itr.next().unwrap() {
+                        'L' => 0,
+                        'R' => 1,
+                        _ => panic!("Unknown col specifier"),
+                    }
+                }
+            }
+            col
         };
         Some((row, col, row * 8 + col))
     }
