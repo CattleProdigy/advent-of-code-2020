@@ -1,4 +1,3 @@
-use std::collections::VecDeque;
 use std::env;
 use std::fs;
 fn gcd(a: i64, b: i64) -> i64 {
@@ -34,6 +33,18 @@ fn find_first_dep_p1(min_dep_time: i64, buses: &Vec<Option<i64>>) -> (i64, i64) 
     }
 }
 
+fn find_phase(a: i64, b: i64, offset: i64) -> i64 {
+    println!("fp: {} {} {}", a, b, offset);
+    let mut x = 0;
+    loop {
+        if (offset + x) % b == 0 {
+            return offset + x;
+        }
+
+        x += a;
+    }
+}
+
 fn find_p2(buses: &Vec<Option<i64>>) -> i64 {
     let buses_offsets: Vec<(i64, i64)> = buses
         .iter()
@@ -42,103 +53,24 @@ fn find_p2(buses: &Vec<Option<i64>>) -> i64 {
         .map(|(i, b)| (i as i64, b.unwrap()))
         .collect();
 
-    let first_id = buses_offsets.first().unwrap().1;
-
-
-    // c0 * b0 = t0 
-    // c1 * b1 != t0 + off1
-
-    // c0 * b0 = t0 + err
-    // c1 * b1 = t0 + off1 + err
-    
-    // c0 * b0 = t0 + x*b0
-    // c1 * b1 = t0 + off1 + x*b0
-
     let offsets = buses_offsets.iter().map(|(i, _)| *i).collect::<Vec<_>>();
     println!("offsets: {:?}", offsets);
 
-    let mut search_queue = VecDeque::<Vec<i64>>::new();
-    search_queue.push_back(vec![0; buses_offsets.len()]);
+    let mut old_freq = buses_offsets.first().unwrap().1;
+    let mut old_offset = 0;
+    for i in 1..offsets.len() {
+        let (offset, freq) = buses_offsets[i];
+        println!("old: {} {}, new: {} {}", old_freq, old_offset, freq, offset);
 
-    let mut result: Vec<i64> = vec![];
-    while !search_queue.is_empty() {
-        let coeffs = search_queue.pop_back().unwrap();
-        println!("c: {:?}", coeffs);
+        let new_phase = find_phase(old_freq, freq, offset + old_offset) - offset;
+        let new_freq = lcm(old_freq, freq);
 
-        let timestamps = buses_offsets
-            .iter()
-            .zip(coeffs.iter())
-            .map(|((_, b), c)| *b * c)
-            .collect::<Vec<_>>();
-        let first_ts = timestamps.first().unwrap();
-        let target_timestamps = offsets.iter().map(|ofs| ofs + first_ts).collect::<Vec<_>>();
-
-        if target_timestamps == timestamps {
-            result = coeffs;
-            break;
-        }
-        println!("ts: {:?}", timestamps);
-        println!("tgt: {:?}", target_timestamps);
-
-        let mut num_changed = 0;
-        let mut new_coeffs = coeffs.to_vec();
-        for (i, &ts) in timestamps.iter().enumerate() {
-            let target = target_timestamps[i];
-            let (_, bus_id) = buses_offsets[i];
-            if ts < target {
-                // calculate new value
-                let diff = target - ts;
-                let new_coeff = diff / bus_id;
-                if new_coeff > 0 && new_coeff * bus_id <= diff {
-                    new_coeffs[i] += new_coeff;
-                    num_changed += 1;
-                }
-            }
-        }
-        if num_changed > 0 {
-            search_queue.push_back(new_coeffs);
-        } else if num_changed == 0 {
-            let mut new_coeffs2 = coeffs.to_vec();
-            new_coeffs2[0] += ;
-            search_queue.push_back(new_coeffs2);
-        }
-        if timestamps[0] > 1068788 {
-            panic!("fukc");
-        }
-
-        // if num_changed == 0 {
-        //     let mut new_coeffs = coeffs.to_vec();
-        //     new_coeffs[0] += 1;
-        //     search_queue.push_back(new_coeffs);
-        // }
-
-        // if num_changed == 0 {
-        //     let raw_diffs = timestamps
-        //         .iter()
-        //         .zip(target_timestamps.iter())
-        //         .map(|(ts, tgt)| tgt - ts)
-        //         .collect::<Vec<_>>();
-        //     println!("diffs: {:?}", raw_diffs);
-        //     let diffs = timestamps
-        //         .iter()
-        //         .zip(target_timestamps.iter())
-        //         .map(|(ts, tgt)| tgt - ts)
-        //         .filter(|x| *x > 0)
-        //         .collect::<Vec<_>>();
-
-        //     let mut new_coeffs = coeffs.to_vec();
-        //     let first = diffs.first();
-        //     if first.is_some() {
-        //         let lcm = diffs.iter().fold(*first.unwrap(), |acc, &d| lcm(acc, d));
-        //         new_coeffs[0] += lcm;
-        //     } else {
-        //         new_coeffs[0] += 1;
-        //     }
-        //     search_queue.push_back(new_coeffs);
-        // }
+        println!("ph: {}, freq: {}", new_phase, new_freq);
+        old_freq = new_freq;
+        old_offset = new_phase;
     }
 
-    result.first().unwrap() * buses_offsets.first().unwrap().1
+    old_offset
 }
 
 fn parse(input: &str) -> (i64, Vec<Option<i64>>) {
@@ -200,5 +132,15 @@ mod tests {
 
         let ts = find_p2(&buses);
         assert_eq!(ts, 1068781);
+    }
+
+    #[test]
+    fn test2() {
+        let example1 = r#"939
+1789,37,47,1889"#;
+
+        let (departure, buses) = parse(&example1);
+        let ts = find_p2(&buses);
+        assert_eq!(ts, 1202161486);
     }
 }
